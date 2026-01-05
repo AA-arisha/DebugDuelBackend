@@ -1,0 +1,28 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Problem {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String
+  buggyCodes   String     @default("{}") 
+  testcases   Testcase[]
+}
+
+model Testcase {
+  id                Int     @id @default(autoincrement())
+  description       String
+  problemId         Int
+  input             String
+  expected          String
+  isHidden          Boolean @default(false)
+  problem           Problem @relation(fields: [problemId], references: [id])
+}
+

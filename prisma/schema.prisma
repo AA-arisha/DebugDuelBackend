@@ -1,28 +1,146 @@
-// prisma/schema.prisma
+// -------------------
+// Datasource
+// -------------------
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+// -------------------
+// Admins
+// -------------------
+model Admin {
+  id        BigInt   @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
 }
 
-model Problem {
-  id          Int          @id @default(autoincrement())
-  title       String
-  description String
-  buggyCodes   String     @default("{}") 
-  testcases   Testcase[]
+// -------------------
+// Teams
+// -------------------
+model Team {
+  id          BigInt        @id @default(autoincrement())
+  teamName    String        @unique
+  password    String
+  leaderEmail String
+  createdAt   DateTime      @default(now())
+
+  Submissions  Submission[]
+  Leaderboards Leaderboard[]
+  EmailLogs    EmailLog[]
 }
 
-model Testcase {
-  id                Int     @id @default(autoincrement())
-  description       String
-  problemId         Int
-  input             String
-  expected          String
-  isHidden          Boolean @default(false)
-  problem           Problem @relation(fields: [problemId], references: [id])
+// -------------------
+// Rounds
+// -------------------
+model Round {
+  id          BigInt     @id @default(autoincrement())
+  roundNumber Int
+  name        String
+  duration    Int        // duration in minutes
+  startTime   DateTime?
+  status      String     @default("locked") // locked | unlocked | active | completed
+  weight      Int        // 20, 40, 60
+  createdAt   DateTime   @default(now())
+
+  Questions    Question[]
+  Submissions  Submission[]
+  Leaderboards Leaderboard[]
 }
 
+// -------------------
+// Questions
+// -------------------
+model Question {
+  id               BigInt      @id @default(autoincrement())
+  roundId          BigInt
+  title            String
+  problemStatement String
+  createdAt        DateTime    @default(now())
+
+  round       Round        @relation(fields: [roundId], references: [id])
+  TestCases   TestCase[]
+  BuggyCodes  BuggyCode[]
+  Submissions Submission[]
+}
+
+// -------------------
+// Test Cases
+// -------------------
+model TestCase {
+  id         BigInt   @id @default(autoincrement())
+  questionId BigInt
+  input      String
+  expectedOutput String
+  isHidden   Boolean  @default(false)
+
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+// -------------------
+// Buggy Codes
+// -------------------
+model BuggyCode {
+  id         BigInt   @id @default(autoincrement())
+  questionId BigInt
+  language   String
+  code       String
+
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+// -------------------
+// Submissions
+// -------------------
+model Submission {
+  id         BigInt   @id @default(autoincrement())
+  teamId     BigInt
+  roundId    BigInt
+  questionId BigInt
+  language   String
+  code       String
+  score      Int
+  submittedAt DateTime @default(now())
+  timeTakenSeconds Int
+  isCorrect  Boolean
+
+  team     Team     @relation(fields: [teamId], references: [id])
+  round    Round    @relation(fields: [roundId], references: [id])
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+// -------------------
+// Leaderboards
+// -------------------
+model Leaderboard {
+  id          BigInt @id @default(autoincrement())
+  roundId     BigInt
+  teamId      BigInt
+  score       Int    @default(0)
+  timePenalty Int    @default(0)
+  rank        Int?
+
+  round Round @relation(fields: [roundId], references: [id])
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@unique([roundId, teamId])
+}
+
+// -------------------
+// Email Logs
+// -------------------
+model EmailLog {
+  id          BigInt   @id @default(autoincrement())
+  teamId      BigInt
+  email       String
+  status      String   // sent | failed
+  errorMessage String?
+  sentAt      DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id])
+}

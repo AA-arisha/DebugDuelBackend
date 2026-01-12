@@ -21,6 +21,7 @@
     "@prisma/adapter-libsql": "^7.0.0",
     "@prisma/client": "^5.22.0",
     "axios": "^1.13.2",
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -30,6 +31,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.5",

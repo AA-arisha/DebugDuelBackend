@@ -11,46 +11,20 @@ generator client {
 }
 
 // -------------------
-// Admins
+// Users (Admins & Participants)
 // -------------------
-model Admin {
+model User {
   id        BigInt   @id @default(autoincrement())
-  username  String   @unique
+  username  String   @unique        // For admin: username, for participant: teamName
+  email     String?                   // For admins or team leaders
   password  String
+  role      String                    // "ADMIN" or "PARTICIPANT"
   createdAt DateTime @default(now())
-}
 
-// -------------------
-// Teams
-// -------------------
-model Team {
-  id          BigInt        @id @default(autoincrement())
-  teamName    String        @unique
-  password    String
-  leaderEmail String
-  createdAt   DateTime      @default(now())
-
-  Submissions  Submission[]
-  Leaderboards Leaderboard[]
-  EmailLogs    EmailLog[]
-}
-
-// -------------------
-// Rounds
-// -------------------
-model Round {
-  id          BigInt     @id @default(autoincrement())
-  roundNumber Int
-  name        String
-  duration    Int        // duration in minutes
-  startTime   DateTime?
-  status      String     @default("locked") // locked | unlocked | active | completed
-  weight      Int        // 20, 40, 60
-  createdAt   DateTime   @default(now())
-
-  Questions    Question[]
-  Submissions  Submission[]
-  Leaderboards Leaderboard[]
+  // Relations (for participants)
+  submissions  Submission[]          @relation("UserSubmissions")
+  leaderboards Leaderboard[]         @relation("UserLeaderboards")
+  emailLogs    EmailLog[]            @relation("UserEmailLogs")
 }
 
 // -------------------
@@ -73,11 +47,11 @@ model Question {
 // Test Cases
 // -------------------
 model TestCase {
-  id         BigInt   @id @default(autoincrement())
-  questionId BigInt
-  input      String
+  id             BigInt   @id @default(autoincrement())
+  questionId     BigInt
+  input          String
   expectedOutput String
-  isHidden   Boolean  @default(false)
+  isHidden       Boolean  @default(false)
 
   question Question @relation(fields: [questionId], references: [id])
 }
@@ -99,7 +73,7 @@ model BuggyCode {
 // -------------------
 model Submission {
   id         BigInt   @id @default(autoincrement())
-  teamId     BigInt
+  userId     BigInt
   roundId    BigInt
   questionId BigInt
   language   String
@@ -109,7 +83,7 @@ model Submission {
   timeTakenSeconds Int
   isCorrect  Boolean
 
-  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation("UserSubmissions", fields: [userId], references: [id])
   round    Round    @relation(fields: [roundId], references: [id])
   question Question @relation(fields: [questionId], references: [id])
 }
@@ -120,15 +94,15 @@ model Submission {
 model Leaderboard {
   id          BigInt @id @default(autoincrement())
   roundId     BigInt
-  teamId      BigInt
+  userId      BigInt
   score       Int    @default(0)
   timePenalty Int    @default(0)
   rank        Int?
 
   round Round @relation(fields: [roundId], references: [id])
-  team  Team  @relation(fields: [teamId], references: [id])
+  user  User  @relation("UserLeaderboards", fields: [userId], references: [id])
 
-  @@unique([roundId, teamId])
+  @@unique([roundId, userId])
 }
 
 // -------------------
@@ -136,11 +110,11 @@ model Leaderboard {
 // -------------------
 model EmailLog {
   id          BigInt   @id @default(autoincrement())
-  teamId      BigInt
+  userId      BigInt
   email       String
   status      String   // sent | failed
   errorMessage String?
   sentAt      DateTime @default(now())
 
-  team Team @relation(fields: [teamId], references: [id])
+  user User @relation("UserEmailLogs", fields: [userId], references: [id])
 }

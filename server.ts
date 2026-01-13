@@ -14,7 +14,7 @@ app.use(express.json());
 
 app.use('/problems', problemRoutes);
 app.use('/submit', submissionRoutes);
-app.use('/run' , runRoutes)
+app.use('/run' , runRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

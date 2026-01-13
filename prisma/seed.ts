@@ -7,10 +7,12 @@ async function main() {
     const hashedpassword = await bcrypt.hash('admin@debugDuel', 10);
     console.log('🌱 Starting database seeding...');
 
-    await prisma.admin.create({
+    await prisma.user.create({
       data:{
         username: 'admin',
+        email: 'k240603@nu.edu.pk',
         password: hashedpassword,
+        role: 'ADMIN'
       },
     })
 

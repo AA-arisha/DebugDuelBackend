@@ -11,14 +11,34 @@ generator client {
 }
 
 // -------------------
-// Users (Admins & Participants)
+// ENUMS
+// -------------------
+enum Role {
+  ADMIN
+  PARTICIPANT
+}
+
+enum RoundStatus {
+  LOCKED
+  UNLOCKED
+  ACTIVE
+  COMPLETED
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+// -------------------
+// USERS (Admins & Participants)
 // -------------------
 model User {
   id        BigInt   @id @default(autoincrement())
   username  String   @unique        // For admin: username, for participant: teamName
   email     String?                   // For admins or team leaders
   password  String
-  role      String                    // "ADMIN" or "PARTICIPANT"
+  role      Role
   createdAt DateTime @default(now())
 
   // Relations (for participants)
@@ -28,7 +48,23 @@ model User {
 }
 
 // -------------------
-// Questions
+// ROUNDS
+// -------------------
+model Round {
+  id        BigInt      @id @default(autoincrement())
+  level     Int
+  status    RoundStatus
+  startsAt  DateTime?
+  duration  Int          // in seconds
+  createdAt DateTime     @default(now())
+
+  questions   Question[]
+  submissions Submission[]
+  leaderboards Leaderboard[]
+}
+
+// -------------------
+// QUESTIONS
 // -------------------
 model Question {
   id               BigInt      @id @default(autoincrement())
@@ -38,13 +74,13 @@ model Question {
   createdAt        DateTime    @default(now())
 
   round       Round        @relation(fields: [roundId], references: [id])
-  TestCases   TestCase[]
-  BuggyCodes  BuggyCode[]
-  Submissions Submission[]
+  testCases   TestCase[]
+  buggyCodes  BuggyCode[]
+  submissions Submission[]
 }
 
 // -------------------
-// Test Cases
+// TEST CASES
 // -------------------
 model TestCase {
   id             BigInt   @id @default(autoincrement())
@@ -57,7 +93,7 @@ model TestCase {
 }
 
 // -------------------
-// Buggy Codes
+// BUGGY CODES
 // -------------------
 model BuggyCode {
   id         BigInt   @id @default(autoincrement())
@@ -69,19 +105,19 @@ model BuggyCode {
 }
 
 // -------------------
-// Submissions
+// SUBMISSIONS
 // -------------------
 model Submission {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt
-  roundId    BigInt
-  questionId BigInt
-  language   String
-  code       String
-  score      Int
-  submittedAt DateTime @default(now())
+  id               BigInt   @id @default(autoincrement())
+  userId           BigInt
+  roundId          BigInt
+  questionId       BigInt
+  language         String
+  code             String
+  score            Int
+  submittedAt      DateTime @default(now())
   timeTakenSeconds Int
-  isCorrect  Boolean
+  isCorrect        Boolean
 
   user     User     @relation("UserSubmissions", fields: [userId], references: [id])
   round    Round    @relation(fields: [roundId], references: [id])
@@ -89,7 +125,7 @@ model Submission {
 }
 
 // -------------------
-// Leaderboards
+// LEADERBOARD
 // -------------------
 model Leaderboard {
   id          BigInt @id @default(autoincrement())
@@ -106,15 +142,15 @@ model Leaderboard {
 }
 
 // -------------------
-// Email Logs
+// EMAIL LOGS
 // -------------------
 model EmailLog {
-  id          BigInt   @id @default(autoincrement())
+  id          BigInt      @id @default(autoincrement())
   userId      BigInt
   email       String
-  status      String   // sent | failed
+  status      EmailStatus
   errorMessage String?
-  sentAt      DateTime @default(now())
+  sentAt      DateTime    @default(now())
 
   user User @relation("UserEmailLogs", fields: [userId], references: [id])
 }

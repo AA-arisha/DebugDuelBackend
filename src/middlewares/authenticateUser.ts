@@ -4,8 +4,8 @@ import dotenv from 'dotenv'
 dotenv.config();
 
 interface jwtPayload{
-    userId: number;
-    userName: string;
+    userId: string;
+    username: string;
     userRole: 'ADMIN' | 'PARTICIPANT';
 }
 
@@ -29,8 +29,9 @@ export const authenticateUser = (requiredRole?: 'ADMIN' | 'PARTICIPANT') =>{
             }
             const decoded = jwt.verify(token , secret) as jwtPayload;
             req.user = decoded;
-            if (requiredRole && decoded.userRole != requiredRole) {
-                return res.status(401).json({message: "Access denied"})
+
+            if (requiredRole && decoded.userRole !== requiredRole) {
+                return res.status(403).json({message: "Access denied" })
             }
             next();
         } catch(error){

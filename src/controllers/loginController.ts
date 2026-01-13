@@ -17,7 +17,7 @@ export const loginController = async ( req: Request , res: Response)=>{
         if(!isMatch) return res.status(401).json({message: "Invalid password"});
 
         const token = jwt.sign(
-            {userId : user.id, username : user.username, Role : user.role},
+            {userId : user.id.toString(), username : user.username, userRole: user.role.toUpperCase() as 'ADMIN' | 'PARTICIPANT',},
             process.env.jwt_secret as string,
             {expiresIn : '4h'}
          )

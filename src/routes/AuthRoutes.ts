@@ -6,7 +6,7 @@ const router = Router();
 router.post('/login', loginController);
 router.get('/dashboard' , authenticateUser('ADMIN') , (req : AuthenticatedRequest , res: Response) =>{
     res.json({
-        message: `Hello Admin ${req.user?.userName}, you have access!`,
+        message: `Hello Admin ${req.user?.username}, you have access!`,
     });
 })
 

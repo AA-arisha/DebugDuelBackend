@@ -3,19 +3,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-<<<<<<< Updated upstream
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
-model Problem {
-  id          Int          @id @default(autoincrement())
-  title       String
-  description String
-  buggyCodes   String     @default("{}") 
-  testcases   Testcase[]
-=======
 // -------------------
 // Users (Admins & Participants)
 // -------------------
@@ -31,21 +18,8 @@ model User {
   submissions  Submission[]          @relation("UserSubmissions")
   leaderboards Leaderboard[]         @relation("UserLeaderboards")
   emailLogs    EmailLog[]            @relation("UserEmailLogs")
->>>>>>> Stashed changes
 }
 
-model Testcase {
-  id                Int     @id @default(autoincrement())
-  description       String
-  problemId         Int
-  input             String
-  expected          String
-  isHidden          Boolean @default(false)
-  problem           Problem @relation(fields: [problemId], references: [id])
-}
-
-<<<<<<< Updated upstream
-=======
 // -------------------
 // Questions
 // -------------------
@@ -137,4 +111,3 @@ model EmailLog {
 
   user User @relation("UserEmailLogs", fields: [userId], references: [id])
 }
->>>>>>> Stashed changes

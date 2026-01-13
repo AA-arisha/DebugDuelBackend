@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 
 export const getAllProblems = async (req: Request, res: Response) => {
   try {
-    const problems = await prisma.problem.findMany({ include: { testcases: true } });
+    const problems = await prisma.question.findMany({ include: { testcases: true } });
     res.json(problems);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -30,7 +30,7 @@ export const getProblemById = async (req: Request, res: Response) => {
     }
 
     // Fetch problem from Prisma
-    const problem = await prisma.problem.findUnique({
+    const problem = await prisma.question.findUnique({
       where: { id: numericId },
       include: { testcases: true },
     });

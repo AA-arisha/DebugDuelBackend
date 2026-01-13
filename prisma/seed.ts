@@ -6,6 +6,7 @@ async function main() {
   try {
     console.log('🌱 Starting database seeding...');
 
+<<<<<<< Updated upstream
     // Clear old data
     await prisma.testcase.deleteMany({});
     await prisma.problem.deleteMany({});
@@ -123,6 +124,14 @@ async function main() {
             isHidden: false,
           },
         ],
+=======
+    await prisma.user.create({
+      data:{
+        username: 'admin',
+        email: 'k240603@nu.edu.pk',
+        password: hashedpassword,
+        role: 'ADMIN'
+>>>>>>> Stashed changes
       },
     ];
 

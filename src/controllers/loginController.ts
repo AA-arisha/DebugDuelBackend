@@ -13,7 +13,7 @@ export const loginController = async ( req: Request , res: Response)=>{
         const user = await prisma.user.findUnique({where : {username }});
         if(!user) return res.status(401).json({message: "Invalid username"});
 
-        const isMatch = bcrypt.compare(password , user.password);
+        const isMatch = await bcrypt.compare(password , user.password);
         if(!isMatch) return res.status(401).json({message: "Invalid password"});
 
         const token = jwt.sign(

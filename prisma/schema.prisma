@@ -28,6 +28,25 @@ model User {
 }
 
 // -------------------
+// Rounds
+// -------------------
+model Round {
+  id          BigInt     @id @default(autoincrement())
+  roundNumber Int
+  name        String
+  duration    Int        // duration in minutes
+  startTime   DateTime?
+  status      String     @default("locked") // locked | unlocked | active | completed
+  weight      Int        // 20, 40, 60
+  createdAt   DateTime   @default(now())
+
+  Questions    Question[]
+  Submissions  Submission[]
+  Leaderboards Leaderboard[]
+}
+
+
+// -------------------
 // Questions
 // -------------------
 model Question {

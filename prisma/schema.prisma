@@ -11,129 +11,189 @@ generator client {
 }
 
 // -------------------
-// Users (Admins & Participants)
+// Enums
+// -------------------
+enum Role {
+  ADMIN
+  PARTICIPANT
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+}
+
+enum RoundStatus {
+  LOCKED
+  UNLOCKED
+  ACTIVE
+  COMPLETED
+}
+
+// -------------------
+// Teams
+// -------------------
+model Team {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members User[]
+}
+
+// -------------------
+// Users
 // -------------------
 model User {
   id        BigInt   @id @default(autoincrement())
-  username  String   @unique        // For admin: username, for participant: teamName
-  email     String?                   // For admins or team leaders
+  username  String?  @unique
+  fullName  String?
+  email     String?  @unique
   password  String
-  role      String                    // "ADMIN" or "PARTICIPANT"
+  role      Role     @default(PARTICIPANT)
   createdAt DateTime @default(now())
 
-  // Relations (for participants)
-  submissions  Submission[]          @relation("UserSubmissions")
-  leaderboards Leaderboard[]         @relation("UserLeaderboards")
-  emailLogs    EmailLog[]            @relation("UserEmailLogs")
+  teamId BigInt?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  isLeader    Boolean     @default(false)
+  emailStatus EmailStatus @default(PENDING)
+  totalScore  Int         @default(0)
+
+  submissions  Submission[]   @relation("UserSubmissions")
+  leaderboards Leaderboard[]  @relation("UserLeaderboards")
+  emailLogs    EmailLog[]     @relation("UserEmailLogs")
+  UserQuestion UserQuestion[]
 }
 
 // -------------------
 // Rounds
 // -------------------
 model Round {
-  id          BigInt     @id @default(autoincrement())
+  id          BigInt      @id @default(autoincrement())
   roundNumber Int
   name        String
-  duration    Int        // duration in minutes
+  duration    Int
   startTime   DateTime?
-  status      String     @default("locked") // locked | unlocked | active | completed
-  weight      Int        // 20, 40, 60
-  createdAt   DateTime   @default(now())
+  endsAt      DateTime?
+  status      RoundStatus @default(LOCKED)
+  weight      Int?
+  createdAt   DateTime    @default(now())
 
   Questions    Question[]
   Submissions  Submission[]
   Leaderboards Leaderboard[]
 }
 
-
 // -------------------
 // Questions
 // -------------------
 model Question {
-  id               BigInt      @id @default(autoincrement())
+  id               BigInt   @id @default(autoincrement())
   roundId          BigInt
   title            String
   problemStatement String
-  createdAt        DateTime    @default(now())
+  createdAt        DateTime @default(now())
 
-  round       Round        @relation(fields: [roundId], references: [id])
-  TestCases   TestCase[]
-  BuggyCodes  BuggyCode[]
-  Submissions Submission[]
+  round        Round          @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  TestCases    TestCase[]
+  BuggyCodes   BuggyCode[]
+  Submissions  Submission[]
+  UserQuestion UserQuestion[]
 }
 
 // -------------------
 // Test Cases
 // -------------------
 model TestCase {
-  id             BigInt   @id @default(autoincrement())
+  id             BigInt  @id @default(autoincrement())
   questionId     BigInt
   input          String
   expectedOutput String
-  isHidden       Boolean  @default(false)
+  description    String?
+  isVisible      Boolean @default(true)
 
-  question Question @relation(fields: [questionId], references: [id])
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 // -------------------
 // Buggy Codes
 // -------------------
 model BuggyCode {
-  id         BigInt   @id @default(autoincrement())
+  id         BigInt @id @default(autoincrement())
   questionId BigInt
   language   String
   code       String
 
-  question Question @relation(fields: [questionId], references: [id])
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 // -------------------
 // Submissions
 // -------------------
 model Submission {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt
-  roundId    BigInt
-  questionId BigInt
-  language   String
-  code       String
-  score      Int
-  submittedAt DateTime @default(now())
+  id               BigInt   @id @default(autoincrement())
+  userId           BigInt
+  roundId          BigInt
+  questionId       BigInt
+  language         String
+  code             String
+  score            Int
+  attemptNumber    Int      @default(1)
+  submittedAt      DateTime @default(now())
   timeTakenSeconds Int
-  isCorrect  Boolean
+  isCorrect        Boolean
 
-  user     User     @relation("UserSubmissions", fields: [userId], references: [id])
-  round    Round    @relation(fields: [roundId], references: [id])
-  question Question @relation(fields: [questionId], references: [id])
+  user     User     @relation("UserSubmissions", fields: [userId], references: [id], onDelete: Cascade)
+  round    Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 // -------------------
 // Leaderboards
 // -------------------
 model Leaderboard {
-  id          BigInt @id @default(autoincrement())
-  roundId     BigInt
-  userId      BigInt
-  score       Int    @default(0)
-  timePenalty Int    @default(0)
-  rank        Int?
+  id           BigInt @id @default(autoincrement())
+  roundId      BigInt
+  userId       BigInt
+  score        Int    @default(0)
+  timePenalty  Int    @default(0)
+  correctCount Int    @default(0)
+  wrongCount   Int    @default(0)
+  rank         Int?
 
-  round Round @relation(fields: [roundId], references: [id])
-  user  User  @relation("UserLeaderboards", fields: [userId], references: [id])
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User  @relation("UserLeaderboards", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roundId, userId])
+}
+
+// -------------------
+// User Questions (track per-user attempts and disabled flag)
+// -------------------
+model UserQuestion {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt
+  questionId BigInt
+  disabled   Boolean  @default(false)
+  attempts   Int      @default(0)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
 }
 
 // -------------------
 // Email Logs
 // -------------------
 model EmailLog {
-  id          BigInt   @id @default(autoincrement())
-  userId      BigInt
-  email       String
-  status      String   // sent | failed
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt
+  email        String
+  status       String
   errorMessage String?
-  sentAt      DateTime @default(now())
+  sentAt       DateTime @default(now())
 
-  user User @relation("UserEmailLogs", fields: [userId], references: [id])
+  user User @relation("UserEmailLogs", fields: [userId], references: [id], onDelete: Cascade)
 }

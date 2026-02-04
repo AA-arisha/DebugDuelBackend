@@ -1,240 +1,179 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Submission, Leaderboard } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const PISTON_EXECUTE_URL = 'https://emkc.org/api/v2/piston/execute';
-const PISTON_RUNTIMES_URL = 'https://emkc.org/api/v2/piston/runtimes';
+import { executeCode, normalizeOutput, fetchRuntimeVersion } from '../utils/piston';
 
-// Type definitions for Piston API
-interface PistonRuntime {
+interface SubmitCodeBody {
+  code: string;
   language: string;
-  version: string;
-  aliases: string[];
+  questionId: string | number;
+  userId: string | number;
 }
 
-interface PistonFile {
-  name: string;
-  content: string;
-}
-
-interface PistonExecutePayload {
-  language: string;
-  version: string;
-  files: PistonFile[];
-  stdin?: string;
-}
-
-interface PistonRunResult {
-  stdout: string;
-  stderr: string;
-  code: number;
-  signal: string | null;
-  output: string;
-}
-
-interface PistonExecuteResponse {
-  language: string;
-  version: string;
-  compile?: any;
-  run: PistonRunResult;
-  message?: string;
-}
-
-// Map frontend language names to Piston API language names
-const languageMap: Record<string, string> = {
-  javascript: 'javascript',
-  python: 'python',
-  cpp: 'c++',
-  java: 'java',
-  c: 'c',
-  csharp: 'csharp',
-  go: 'go',
-  rust: 'rust',
-  ruby: 'ruby',
-  php: 'php'
-};
-
-// Map language to file names
-const fileNameMap: Record<string, string> = {
-  javascript: 'main.js',
-  python: 'main.py',
-  cpp: 'main.cpp',
-  java: 'Main.java',
-  c: 'main.c',
-  csharp: 'Main.cs',
-  go: 'main.go',
-  rust: 'main.rs',
-  ruby: 'main.rb',
-  php: 'main.php'
-};
-
-// Helper function to normalize output (trim whitespace)
-const normalizeOutput = (output: string): string => {
-  return output.trim().replace(/\r\n/g, '\n');
-};
-
-// Helper function to execute code with Piston API
-const executeCode = async (
-  code: string,
-  language: string,
-  stdin: string,
-  version: string
-): Promise<PistonExecuteResponse> => {
-  const pistonLanguage = languageMap[language.toLowerCase()] || language;
-  const fileName = fileNameMap[language.toLowerCase()] || 'main.txt';
-
-  const payload: PistonExecutePayload = {
-    language: pistonLanguage,
-    version: version,
-    files: [
-      {
-        name: fileName,
-        content: code
-      }
-    ],
-    stdin: stdin
-  };
-
-  const response = await fetch(PISTON_EXECUTE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  return await response.json() as PistonExecuteResponse;
-};
-
-export const submitCode = async (req: Request, res: Response) => {
+export const submitCode = async (req: Request<{}, {}, SubmitCodeBody>, res: Response) => {
   try {
-    const { code, language, problemId } = req.body;
+    const { code, language, questionId, userId } = req.body;
 
-    // Validate input
-    if (!code || !language || !problemId) {
-      return res.status(400).json({
-        message: 'Code, language, and problemId are required'
-      });
+    if (!code || !language || !questionId || !userId) {
+      return res.status(400).json({ message: 'code, language, questionId, and userId are required' });
     }
 
-    // Fetch the problem with test cases from database
-    const problem = await prisma.problem.findUnique({
-      where: { id: problemId },
-      include: {
-        testcases: true // Include related test cases
-      }
+    const question = await prisma.question.findUnique({
+      where: { id: BigInt(questionId) },
+      include: { TestCases: true, round: true }
     });
-    
-    if (!problem) {
-      return res.status(404).json({
-        message: 'Problem not found'
-      });
-    }
 
-    if (!problem.testcases || problem.testcases.length === 0) {
-      return res.status(400).json({
-        message: 'No test cases available for this problem'
-      });
-    }
+    if (!question) return res.status(404).json({ message: 'Question not found' });
+    if (!question.TestCases || question.TestCases.length === 0)
+      return res.status(400).json({ message: 'No test cases available for this question' });
 
-    // Get runtime version for the language
-    const pistonLanguage = languageMap[language.toLowerCase()] || language;
-    let version: string | undefined;
+    const round = question.round;
+    if (!round.startTime) return res.status(400).json({ message: 'Round has not started yet' });
 
-    try {
-      const rtRes = await fetch(PISTON_RUNTIMES_URL);
-      if (rtRes.ok) {
-        const runtimes = await rtRes.json() as PistonRuntime[];
-        const match = runtimes.find((r) => r.language === pistonLanguage);
-        if (match) {
-          version = match.version;
-        }
-      }
-    } catch (versionError) {
-      console.error('Error fetching runtime version:', versionError);
-    }
+    const timeTakenSeconds = Math.floor((Date.now() - new Date(round.startTime).getTime()) / 1000);
 
-    if (!version) {
-      return res.status(400).json({
-        message: `Language "${pistonLanguage}" is not supported or runtime not available`
-      });
-    }
+    // Fetch runtime version
+    const version = await fetchRuntimeVersion(language);
+    if (!version) return res.status(400).json({ message: `Runtime for ${language} not available` });
 
-    // Run code against all test cases
-    const totalTests = problem.testcases.length;
+    // Run test cases
+    const totalTests = question.TestCases.length;
     let passedTests = 0;
 
-    for (let i = 0; i < problem.testcases.length; i++) {
-      const testCase = problem.testcases[i];
-      
-      try {
-        // Execute the code with test case input
-        const result = await executeCode(
-          code,
-          language,
-          testCase.input,
-          version
-        );
+    for (let i = 0; i < totalTests; i++) {
+      const testCase = question.TestCases[i];
+      const result = await executeCode(code, language, testCase.input, version);
 
-        // Check for compilation or runtime errors
-        if (result.run.code !== 0) {
-          return res.status(200).json({
-            success: false,
-            failedTest: i + 1,
-            totalTests,
-            passedTests,
-            error: 'Runtime Error',
-            stderr: result.run.stderr,
-            testCaseDescription: testCase.description,
-            message: `Test case ${i + 1} failed with runtime error`
-          });
-        }
-
-        // Normalize and compare output
-        const actualOutput = normalizeOutput(result.run.stdout);
-        const expectedOutput = normalizeOutput(testCase.expected);
-
-        if (actualOutput !== expectedOutput) {
-          return res.status(200).json({
-            success: false,
-            failedTest: i + 1,
-            totalTests,
-            passedTests,
-            expected: expectedOutput,
-            actual: actualOutput,
-            input: testCase.input,
-            testCaseDescription: testCase.description,
-            message: `Test case ${i + 1} failed: Output mismatch`
-          });
-        }
-
-        // Test case passed
-        passedTests++;
-
-      } catch (executeError: any) {
-        console.error(`Error executing test case ${i + 1}:`, executeError);
-        return res.status(500).json({
+      if (result.run.code !== 0) {
+        return res.status(200).json({
           success: false,
           failedTest: i + 1,
           totalTests,
           passedTests,
-          message: `Test case ${i + 1} execution failed: ${executeError.message}`
+          error: 'Runtime Error',
+          stderr: result.run.stderr,
+          testCaseDescription: testCase.description
         });
       }
+
+      const actualOutput = normalizeOutput(result.run.stdout);
+      const expectedOutput = normalizeOutput(testCase.expectedOutput);
+
+      if (actualOutput !== expectedOutput) {
+        return res.status(200).json({
+          success: false,
+          failedTest: i + 1,
+          totalTests,
+          passedTests,
+          expected: expectedOutput,
+          actual: actualOutput,
+          input: testCase.input,
+          testCaseDescription: testCase.description
+        });
+      }
+
+      passedTests++;
     }
 
-    // All test cases passed!
-    return res.status(200).json({
-      success: true,
-      passedTests,
-      totalTests,
-      message: 'All test cases passed! Solution accepted.'
+    // Calculate scoring rules
+    const questionsInRound = await prisma.question.count({ where: { roundId: round.id } });
+    const maxScore = questionsInRound > 0 ? Math.round(((round.weight ?? 0) / questionsInRound)) : 0;
+
+    // Ensure userQuestion tracking exists
+    let userQuestion = await prisma.userQuestion.findUnique({
+      where: { userId_questionId: { userId: BigInt(userId), questionId: question.id } }
     });
 
-  } catch (error: any) {
-    console.error('Submit code error:', error);
-    return res.status(500).json({
-      message: 'Submission failed',
-      error: error?.message || String(error)
+    if (!userQuestion) {
+      userQuestion = await prisma.userQuestion.create({ data: { userId: BigInt(userId), questionId: question.id } });
+    }
+
+    if (userQuestion.disabled) return res.status(400).json({ message: 'Question already solved/disabled for this user' });
+    if (userQuestion.attempts >= 3) return res.status(400).json({ message: 'Maximum attempts reached for this question' });
+
+    const prevAttempts = userQuestion.attempts;
+    const attemptNumber = prevAttempts + 1;
+
+    let earnedScore = 0;
+    if (passedTests === totalTests) {
+      const deductionFactor = Math.min(prevAttempts / 3, 1);
+      earnedScore = Math.max(0, Math.round(maxScore * (1 - deductionFactor)));
+    }
+
+    // --- Atomic transaction ---
+    const [submission, leaderboard]: [Submission, Leaderboard] = await prisma.$transaction(async (tx) => {
+      const isCorrect = passedTests === totalTests;
+
+      const sub = await tx.submission.create({
+        data: {
+          userId: BigInt(userId),
+          roundId: round.id,
+          questionId: question.id,
+          language,
+          code,
+          score: earnedScore,
+          attemptNumber,
+          timeTakenSeconds,
+          isCorrect
+        }
+      });
+
+      await tx.userQuestion.update({
+        where: { userId_questionId: { userId: BigInt(userId), questionId: question.id } },
+        data: { attempts: attemptNumber, disabled: isCorrect }
+      });
+
+      let lb = await tx.leaderboard.findUnique({
+        where: { roundId_userId: { roundId: round.id, userId: BigInt(userId) } }
+      });
+
+      if (!lb) {
+        lb = await tx.leaderboard.create({
+          data: {
+            userId: BigInt(userId),
+            roundId: round.id,
+            score: isCorrect ? earnedScore : 0,
+            timePenalty: isCorrect ? timeTakenSeconds : 0,
+            correctCount: isCorrect ? 1 : 0,
+            wrongCount: isCorrect ? 0 : 1
+          }
+        });
+      } else {
+        lb = await tx.leaderboard.update({
+          where: { id: lb.id },
+          data: {
+            score: isCorrect ? lb.score + earnedScore : lb.score,
+            timePenalty: isCorrect ? lb.timePenalty + timeTakenSeconds : lb.timePenalty,
+            correctCount: isCorrect ? lb.correctCount + 1 : lb.correctCount,
+            wrongCount: isCorrect ? lb.wrongCount : lb.wrongCount + 1
+          }
+        });
+      }
+
+      // Recalculate ranks for the round (rebuild full order)
+      const allLbs = await tx.leaderboard.findMany({ where: { roundId: round.id }, orderBy: [{ score: 'desc' }, { timePenalty: 'asc' }] });
+      for (let i = 0; i < allLbs.length; i++) {
+        await tx.leaderboard.update({ where: { id: allLbs[i].id }, data: { rank: i + 1 } });
+      }
+
+      // Update user's overall totalScore if correct
+      if (isCorrect && earnedScore > 0) {
+        await tx.user.update({ where: { id: BigInt(userId) }, data: { totalScore: { increment: earnedScore } } });
+      }
+
+      return [sub, lb];
     });
+
+    return res.status(200).json({
+      success: true,
+      submission,
+      leaderboard,
+      message: 'All test cases passed! Submission saved and leaderboard updated atomically.'
+    });
+  } catch (error: any) {
+    console.error('Submission error:', error);
+    return res.status(500).json({ message: 'Submission failed', error: error?.message || String(error) });
   }
 };

@@ -24,6 +24,7 @@ export const getQuestionById = async (req: Request, res: Response) => {
     id: question.id.toString(),
     title: question.title,
     problemStatement: question.problemStatement,
+    roundId: question.roundId,
     testcases: question.TestCases.map(tc => ({
       id: tc.id.toString(),
       input: tc.input,

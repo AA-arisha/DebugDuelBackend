@@ -30,7 +30,8 @@ async function main() {
     data: {
       roundId: round.id,
       title: "The Flattening Logic",
-      problemStatement: `You are given a 2D array grid[ROWS][COLS] representing the pixelated forest.
+      problemStatement: `
+                         You are given a 2D array grid[ROWS][COLS] representing the pixelated forest.
                          You must transfer all elements into a 1D array linear_anchor[ROWS * COLS] such that each row follows the previous one in a continuous line.`,
             },
   });
@@ -38,7 +39,8 @@ async function main() {
     data: {
       roundId: round.id,
       title: "Energy Signature Analysis",
-      problemStatement: `The Mission: Identify the Anchors The gravity in your home dimension is inverting! 
+      problemStatement: `
+                        The Mission: Identify the Anchors The gravity in your home dimension is inverting! 
                         To ground the reality, you must identify the two strongest energy peaks (2nd Max) and the two most stable floor-values (2nd Min). 
                         Because both Kiros are present, their signatures are overlapping.`,
             },
@@ -47,7 +49,8 @@ async function main() {
     data: {
       roundId: round.id,
       title: "Environment Lockdown Sequence",
-      problemStatement: `The Paradox-Verse is seconds away from total collapse.
+      problemStatement: `
+                          The Paradox-Verse is seconds away from total collapse.
                           As Interstellar Kiro’s corrupted energy surges through the fabric of reality, the environment begins executing its last automated stabilization protocol. This protocol was designed by the Paradox-Verse itself — a failsafe that can temporarily lock reality into a stable state and prevent it from falling into the Glitch Abyss.
                           However, the system is fragile. A single misinterpretation in its logic could cause the universe to fragment permanently.
                           You are tasked with debugging the core stabilization program that determines whether the Paradox-Verse can survive this confrontation.`,
@@ -60,8 +63,8 @@ async function main() {
       {
         questionId: q1.id,
         input: `101 102 103
-                201 202 203
-                301 302 303`,
+201 202 203
+301 302 303`,
         expectedOutput: "101 102 103 201 202 203 301 302 303",
         description: "Standard 3x3 flattening",
       },
@@ -73,14 +76,16 @@ async function main() {
       {
         questionId: q2.id,
         input: `10, 20, 30, 40, 50`,
-        expectedOutput: `2nd Max: 40
+        expectedOutput: `
+                         2nd Max: 40
                          2nd Min: 20`,
         description: "",
       },
       {
         questionId: q2.id,
         input: `89, 45, 89, 12, 67, 12`,
-        expectedOutput: `2nd Max: 67
+        expectedOutput: `
+                         2nd Max: 67
                          2nd Min: 45`,
         description: "",
       },
@@ -94,7 +99,8 @@ async function main() {
       input: `25000
               1
               green`,
-      expectedOutput: ` Initiating stabilization sequence...
+      expectedOutput: ` 
+                        Initiating stabilization sequence...
                         3
                         2
                         1
@@ -103,19 +109,23 @@ async function main() {
     },
     {
       questionId: q3.id,
-      input: `15000
+      input: `
+              15000
               1
               green`,
-      expectedOutput: `WARNING: System instability detected!
+      expectedOutput: `
+                       WARNING: System instability detected!
                        Stabilization Failed — Universe Unstable`,
       description: "Insufficient Energy Core Level",
     },
     {
       questionId: q3.id,
-      input: `30000
+      input: `
+              30000
               0
               green`,
-      expectedOutput: `WARNING: System instability detected!
+      expectedOutput: `
+                       WARNING: System instability detected!
                        Stabilization Failed — Universe Unstable`,
       description: "Guardian Sync Failure",
       isVisible: false
@@ -130,7 +140,8 @@ async function main() {
       {
         questionId: q1.id,
         language: "C",
-        code: `#include <stdio.h>
+        code: `
+                #include <stdio.h>
                 int main() {
                     int grid[10][10];
                     int linear_anchor[100];
@@ -160,8 +171,9 @@ async function main() {
       },
       {
         questionId: q1.id,
-        language: "C++",
-        code: `#include <iostream>
+        language: "Cpp",
+        code: `
+                #include <iostream>
                 using namespace std;
 
                 int main() {
@@ -194,7 +206,8 @@ async function main() {
       {
         questionId: q1.id,
         language: "Java",
-        code: `import java.util.Scanner;
+        code: `
+              import java.util.Scanner;
                 public class BuggyFlatten {
                     public static void main(String[] args) {
                         Scanner sc = new Scanner(System.in);
@@ -229,7 +242,8 @@ async function main() {
       {
         questionId: q1.id,
         language: "Python",
-        code: `grid = [[0 for _ in range(10)] for _ in range(10)]
+        code: `
+              grid = [[0 for _ in range(10)] for _ in range(10)]
               linear_anchor = [0 for _ in range(100)]
 
               for i in range(10):
@@ -254,7 +268,8 @@ async function main() {
       {
         questionId: q2.id,
         language: "C",
-        code: `#include <stdio.h>
+        code: `
+                #include <stdio.h>
 
                 int main() {
                     int n, i;
@@ -298,8 +313,9 @@ async function main() {
       },
       {
         questionId: q2.id,
-        language: "C++",
-        code: `#include <iostream>
+        language: "Cpp",
+        code: `
+                #include <iostream>
                 using namespace std;
 
                 int main() {
@@ -347,7 +363,8 @@ async function main() {
       {
         questionId: q2.id,
         language: "Java",
-        code: `import java.util.Scanner;
+        code: `
+                import java.util.Scanner;
                 public class BuggyFlatten {
                     public static void main(String[] args) {
                         Scanner sc = new Scanner(System.in);
@@ -382,7 +399,8 @@ async function main() {
       {
         questionId: q2.id,
         language: "Python",
-        code: `# Buggy Energy Signature Analysis
+        code: `
+                # Buggy Energy Signature Analysis
 
                 n = int(input())
                 arr = list(map(int, input().split()))
@@ -416,7 +434,8 @@ async function main() {
       {
         questionId: q3.id,
         language: "C",
-        code: `#include <stdio.h>
+        code: `
+                #include <stdio.h>
 
                 int main() {
                     int energy;
@@ -444,8 +463,9 @@ async function main() {
       },
       {
         questionId: q3.id,
-        language: "C++",
-        code: `#include <iostream>
+        language: "Cpp",
+        code: `
+                #include <iostream>
                 using namespace std;
 
                 int main() {
@@ -477,7 +497,8 @@ async function main() {
       {
         questionId: q3.id,
         language: "Java",
-        code: `import java.util.Scanner;
+        code: `
+              import java.util.Scanner;
 
               public class Buggy {
                   public static void main(String[] args) {
@@ -506,7 +527,8 @@ async function main() {
       {
         questionId: q3.id,
         language: "Python",
-        code: ` energyy = int(input())
+        code: ` 
+                energyy = int(input())
                 sync = int(input())
                 state = input()
 

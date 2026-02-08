@@ -201,7 +201,7 @@ export const submitQuestion = async (req: AuthenticatedRequest, res: Response) =
         } as any;
       }));
 
-      io.to(`round_${roundId}`).emit('round_leaderboard_update', { roundId: round.id, leaderboard: payload });
+      io.to(`round_${roundId}`).emit('round_leaderboard_update', { roundId: round.id.toString(), leaderboard: payload });
 
       // Competition overall leaderboard: top users by totalScore
       const overall = await prisma.user.findMany({
@@ -210,8 +210,10 @@ export const submitQuestion = async (req: AuthenticatedRequest, res: Response) =
         select: { id: true, username: true, fullName: true, totalScore: true }
       });
 
+      // stringify ids in overall leaderboard for frontend
+      const normalizedOverall = overall.map(u => ({ id: u.id.toString(), username: u.username, fullName: u.fullName, totalScore: u.totalScore }));
       io.to('competition_overall').emit('competition_leaderboard_update', {
-        leaderboard: overall
+        leaderboard: normalizedOverall
       });
     } catch (ioErr) {
       console.warn('Socket emit failed (socket may not be initialized yet):', ioErr);
@@ -230,12 +232,11 @@ export const submitQuestion = async (req: AuthenticatedRequest, res: Response) =
     }));
 
     return res.status(200).json({
-      success: true,
+      success: passedAll,
       solved: passedAll,
-      passedTests: passedAll ? totalTests : totalTests - (failedTestIndex ?? 0),
       totalTests,
       attempts: attemptNumber,
-      message: passedAll ? 'All tests passed' : `Failed on test ${failedTestIndex}`,
+      message: passedAll ? 'All tests passed' : `Submission failed`,
       submissions: submissionsSummary
     });
   } catch (err: any) {

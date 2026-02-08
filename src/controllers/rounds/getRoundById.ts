@@ -7,6 +7,7 @@ export const getRoundDetailsById = async (req: Request, res: Response) => {
   const { roundId } = req.params;
 
 
+  
   if (!roundId) {
     return res.status(400).json({ error: "Round ID is required" });
   }
@@ -130,6 +131,8 @@ export const getRoundDetailsById = async (req: Request, res: Response) => {
         rank: index + 1,
         ...team,
       }));
+     
+
 
     // Return response including user attempts for frontend button control
     return res.json({

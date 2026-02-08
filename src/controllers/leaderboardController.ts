@@ -1,40 +1,66 @@
 import { Request, Response } from 'express';
 import prisma from '../prismaClient';
 
-
-// Round leaderboard: per-user entries with submissions summary
+// Round leaderboard: per-user entries with submissions summary (optimized)
 export const roundLeaderboard = async (req: Request, res: Response) => {
   try {
     const { roundId } = req.params;
     if (!roundId) return res.status(400).json({ message: 'roundId required' });
 
+    // 1️⃣ Fetch all leaderboard entries with user and team info
     const lbs = await prisma.leaderboard.findMany({
       where: { roundId: BigInt(roundId) },
       include: { user: { include: { team: true } } },
-      orderBy: [{ score: 'desc' }, { timePenalty: 'asc' }]
+      orderBy: [{ score: 'desc' }, { timePenalty: 'asc' }],
     });
 
-    // For each leaderboard entry, gather per-question submissions for that user in the round
-    const result = await Promise.all(lbs.map(async (l) => {
-      const subs = await prisma.submission.findMany({ where: { userId: l.userId, roundId: BigInt(roundId) }, orderBy: { submittedAt: 'asc' } });
-      const submissions = subs.map(s => ({
+    // 2️⃣ Fetch all submissions for this round at once
+    const allUserIds = lbs.map(l => l.userId);
+    const allSubs = await prisma.submission.findMany({
+      where: { roundId: BigInt(roundId), userId: { in: allUserIds } },
+      orderBy: { submittedAt: 'asc' },
+    });
+
+    // 3️⃣ Fetch all questions used in these submissions at once
+    const questionIds = Array.from(new Set(allSubs.map(s => s.questionId)));
+    const questions = await prisma.question.findMany({
+      where: { id: { in: questionIds } },
+    });
+    const questionMap = new Map<number, string>();
+    questions.forEach(q => questionMap.set(Number(q.id), q.title));
+
+    // 4️⃣ Group submissions by userId
+    const subsByUser = new Map<number, typeof allSubs>();
+    allUserIds.forEach(uid => subsByUser.set(Number(uid), []));
+    allSubs.forEach(s => {
+      const arr = subsByUser.get(Number(s.userId));
+      if (arr) arr.push(s);
+    });
+
+    // 5️⃣ Build final result
+    const result = lbs.map(l => {
+      const userSubs = subsByUser.get(Number(l.userId)) || [];
+      const submissions = userSubs.map(s => ({
         questionId: s.questionId.toString(),
+        questionTitle: questionMap.get(Number(s.questionId)) ?? `Question ${s.questionId}`,
         correct: s.isCorrect,
-        timeSubmitted: s.submittedAt
+        timeSubmitted: s.submittedAt,
       }));
 
       return {
+        id: l.userId, // frontend key
         userId: l.userId,
-        teamName: l.user?.team ? l.user.team.name : l.user?.username,
         username: l.user?.username,
+        userName: l.user?.username,
+        teamName: l.user?.team ? l.user.team.name : l.user?.username,
         rank: l.rank,
         score: l.score,
         correctCount: l.correctCount,
         wrongCount: l.wrongCount,
         timePenalty: l.timePenalty,
-        submissions
+        submissions,
       };
-    }));
+    });
 
     res.json(result);
   } catch (err) {

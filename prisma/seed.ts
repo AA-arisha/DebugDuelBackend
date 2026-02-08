@@ -1,6 +1,57 @@
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+/**
+ * Sanitize multiline code strings by removing common leading indentation  
+ * and trimming blank lines while preserving relative indentation.
+ */
+function sanitizeCode(code: string): string {
+  // Split into lines
+  const lines = code.split('\n');
+
+  // Remove leading and trailing blank lines
+  let startIdx = 0;
+  let endIdx = lines.length - 1;
+
+  while (startIdx <= endIdx && lines[startIdx].trim() === '') {
+    startIdx++;
+  }
+
+  while (endIdx >= startIdx && lines[endIdx].trim() === '') {
+    endIdx--;
+  }
+
+  if (startIdx > endIdx) {
+    return '';
+  }
+
+  const trimmedLines = lines.slice(startIdx, endIdx + 1);
+
+  // Find minimum common leading whitespace (excluding blank lines)
+  let minIndent = Infinity;
+  for (const line of trimmedLines) {
+    if (line.trim() !== '') {
+      const leadingSpaces = line.match(/^(\s*)/)?.[1].length ?? 0;
+      minIndent = Math.min(minIndent, leadingSpaces);
+    }
+  }
+
+  // If no common indent found, return as-is
+  if (minIndent === Infinity || minIndent === 0) {
+    return trimmedLines.join('\n');
+  }
+
+  // Remove common indentation from all lines and clean up blank lines
+  const sanitized = trimmedLines.map((line) => {
+    if (line.trim() === '') {
+      return ''; // Convert blank lines to empty strings (no whitespace)
+    }
+    return line.length > minIndent ? line.substring(minIndent) : line.trim();
+  });
+
+  return sanitized.join('\n');
+}
+
 async function main() {
   try {
     
@@ -30,30 +81,30 @@ async function main() {
     data: {
       roundId: round.id,
       title: "The Flattening Logic",
-      problemStatement: `
+      problemStatement: sanitizeCode(`
                          You are given a 2D array grid[ROWS][COLS] representing the pixelated forest.
-                         You must transfer all elements into a 1D array linear_anchor[ROWS * COLS] such that each row follows the previous one in a continuous line.`,
+                         You must transfer all elements into a 1D array linear_anchor[ROWS * COLS] such that each row follows the previous one in a continuous line.`),
             },
   });
   const q2 = await prisma.question.create({
     data: {
       roundId: round.id,
       title: "Energy Signature Analysis",
-      problemStatement: `
+      problemStatement: sanitizeCode(`
                         The Mission: Identify the Anchors The gravity in your home dimension is inverting! 
                         To ground the reality, you must identify the two strongest energy peaks (2nd Max) and the two most stable floor-values (2nd Min). 
-                        Because both Kiros are present, their signatures are overlapping.`,
+                        Because both Kiros are present, their signatures are overlapping.`),
             },
   });
   const q3 = await prisma.question.create({
     data: {
       roundId: round.id,
       title: "Environment Lockdown Sequence",
-      problemStatement: `
+      problemStatement: sanitizeCode(`
                           The Paradox-Verse is seconds away from total collapse.
-                          As Interstellar Kiro’s corrupted energy surges through the fabric of reality, the environment begins executing its last automated stabilization protocol. This protocol was designed by the Paradox-Verse itself — a failsafe that can temporarily lock reality into a stable state and prevent it from falling into the Glitch Abyss.
+                          As Interstellar Kiro's corrupted energy surges through the fabric of reality, the environment begins executing its last automated stabilization protocol. This protocol was designed by the Paradox-Verse itself — a failsafe that can temporarily lock reality into a stable state and prevent it from falling into the Glitch Abyss.
                           However, the system is fragile. A single misinterpretation in its logic could cause the universe to fragment permanently.
-                          You are tasked with debugging the core stabilization program that determines whether the Paradox-Verse can survive this confrontation.`,
+                          You are tasked with debugging the core stabilization program that determines whether the Paradox-Verse can survive this confrontation.`),
             },
   });
 
@@ -62,71 +113,97 @@ async function main() {
     data: [
       {
         questionId: q1.id,
-        input: `101 102 103
+        input: sanitizeCode(`101 102 103
 201 202 203
-301 302 303`,
+301 302 303`),
         expectedOutput: "101 102 103 201 202 203 301 302 303",
         description: "Standard 3x3 flattening",
       },
       
     ],
   });
-  await prisma.testCase.createMany({
-    data: [
-      {
-        questionId: q2.id,
-        input: `10, 20, 30, 40, 50`,
-        expectedOutput: `
-                         2nd Max: 40
-                         2nd Min: 20`,
-        description: "",
-      },
-      {
-        questionId: q2.id,
-        input: `89, 45, 89, 12, 67, 12`,
-        expectedOutput: `
-                         2nd Max: 67
-                         2nd Min: 45`,
-        description: "",
-      },
-      
-    ],
-  });
+await prisma.testCase.createMany({
+  data: [
+    {
+      questionId: q2.id,
+      input: sanitizeCode(`5
+10 20 30 40 50`),
+      expectedOutput: sanitizeCode(`
+2nd Max: 40
+2nd Min: 20
+      `),
+      description: "Simple increasing sequence",
+    },
+    {
+      questionId: q2.id,
+      input: sanitizeCode(`6
+89 45 89 12 67 12`),
+      expectedOutput: sanitizeCode(`
+2nd Max: 67
+2nd Min: 45
+      `),
+      description: "Contains duplicates",
+    },
+    {
+      questionId: q2.id,
+      input: sanitizeCode(`5
+-1 -5 -3 -10 -7`),
+      expectedOutput: sanitizeCode(`
+2nd Max: -3
+2nd Min: -7
+      `),
+      description: "Negative numbers",
+    },
+    {
+      questionId: q2.id,
+      input: sanitizeCode(`6
+1 2 3 4 5 6`),
+      expectedOutput: sanitizeCode(`
+2nd Max: 5
+2nd Min: 2
+      `),
+      description: "Sequential numbers",
+      isVisible: false,
+    },
+  ],
+});
+
   await prisma.testCase.createMany({
   data: [
     {
       questionId: q3.id,
-      input: `25000
-              1
-              green`,
-      expectedOutput: ` 
+      input: sanitizeCode(`
+                25000
+                1
+                green`),
+      expectedOutput: sanitizeCode(` 
                         Initiating stabilization sequence...
                         3
                         2
                         1
-                        Universe Stabilized!`,
+                        Universe Stabilized!`),
       description: "Successful Stabilization (All Conditions Met)",
     },
     {
       questionId: q3.id,
-      input: `
+      input: sanitizeCode(`
               15000
               1
-              green`,
-      expectedOutput: `
+              green`),
+      expectedOutput: sanitizeCode(`
                        WARNING: System instability detected!
-                       Stabilization Failed — Universe Unstable`,
+                       Stabilization Failed — Universe Unstable`),
       description: "Insufficient Energy Core Level",
     },
     {
       questionId: q3.id,
-      input: `
+      input: sanitizeCode(`
               30000
               0
-              green`,
-      expectedOutput: `
+              green`),
+      expectedOutput: sanitizeCode(`
                        WARNING: System instability detected!
-                       Stabilization Failed — Universe Unstable`,
+                       Stabilization Failed — Universe Unstable`),
       description: "Guardian Sync Failure",
       isVisible: false
     },
@@ -136,153 +213,146 @@ async function main() {
 
   // 4. Create Buggy Code Snippets
   await prisma.buggyCode.createMany({
-    data: [
-      {
-        questionId: q1.id,
-        language: "C",
-        code: `
-                #include <stdio.h>
-                int main() {
-                    int grid[10][10];
-                    int linear_anchor[100];
-                    int i, j, k;
-
-                    for (i = 0; i < 10; i++) {
-                        for (j = 0; j < 10; j++) {
-                            scanf("%d", &grid[i][j]);
-                        }
-                    }
-
-                    for (i = 0; i < 10; i++) {
-                        k = 0;                      
-                        for (j = 0; j < 9; j++) {   
-                            linear_anchor[k] = grid[i][j];
-                            k++;
-                        }
-                    }
-
-                    for (i = 0; i < 100; i++) {
-                        printf("%d ", linear_anchor[i]);
-                    }
-
-                    return 0;
+  data: [
+    {
+      questionId: q1.id,
+      language: "C",
+      code: sanitizeCode(`
+        #include <stdio.h>
+        int main() {
+            int grid[3][3];
+            int linear_anchor[9];
+            int i, j, k;
+            for (i = 0; i < 3; i++) {
+                for (j = 0; j < 3; j++) {
+                    scanf("%d", &grid[i][j]);
                 }
-                `,
-      },
-      {
-        questionId: q1.id,
-        language: "Cpp",
-        code: `
-                #include <iostream>
-                using namespace std;
-
-                int main() {
-                    int grid[10][10];
-                    int linear_anchor[100];
-                    int i, j, k;
-
-                    for (i = 0; i < 10; i++) {
-                        for (j = 0; j < 10; j++) {
-                            cin >> grid[i][j];
-                        }
-                    }
-
-                    for (i = 0; i < 10; i++) {
-                        k = 0;                    
-                        for (j = 0; j < 9; j++) { 
-                            linear_anchor[k] = grid[i][j];
-                            k++;
-                        }
-                    }
-
-                    for (i = 0; i < 100; i++) {
-                        cout << linear_anchor[i] << " ";
-                    }
-
-                    return 0;
+            }
+            for (i = 0; i < 3; i++) {
+                k = 0;                      
+                for (j = 0; j < 2; j++) {   // still buggy
+                    linear_anchor[k] = grid[i][j];
+                    k++;
                 }
-                `,
-      },
-      {
-        questionId: q1.id,
-        language: "Java",
-        code: `
-              import java.util.Scanner;
-                public class BuggyFlatten {
-                    public static void main(String[] args) {
-                        Scanner sc = new Scanner(System.in);
+            }
+            for (i = 0; i < 9; i++) {
+                printf("%d ", linear_anchor[i]);
+            }
+            return 0;
+        }
+      `),
+    },
+    {
+      questionId: q1.id,
+      language: "Cpp",
+      code: sanitizeCode(`
+        #include <iostream>
+        using namespace std;
 
-                        int[][] grid = new int[10][10];
-                        int[] linearAnchor = new int[100];
-                        int i, j, k;
+        int main() {
+            int grid[3][3];
+            int linear_anchor[9];
+            int i, j, k;
 
-                        for (i = 0; i < 10; i++) {
-                            for (j = 0; j < 10; j++) {
-                                grid[i][j] = sc.nextInt();
-                            }
-                        }
+            for (i = 0; i < 3; i++) {
+                for (j = 0; j < 3; j++) {
+                    cin >> grid[i][j];
+                }
+            }
 
-                        for (i = 0; i < 10; i++) {
-                            k = 0;                    
-                            for (j = 0; j < 9; j++) { 
-                                linearAnchor[k] = grid[i][j];
-                                k++;
-                            }
-                        }
+            for (i = 0; i < 3; i++) {
+                k = 0;                    
+                for (j = 0; j < 2; j++) { // still buggy
+                    linear_anchor[k] = grid[i][j];
+                    k++;
+                }
+            }
 
-                        for (i = 0; i < 100; i++) {
-                            System.out.print(linearAnchor[i] + " ");
-                        }
+            for (i = 0; i < 9; i++) {
+                cout << linear_anchor[i] << " ";
+            }
 
-                        sc.close();
+            return 0;
+        }
+      `),
+    },
+    {
+      questionId: q1.id,
+      language: "Java",
+      code: sanitizeCode(`
+        import java.util.Scanner;
+        public class BuggyFlatten {
+            public static void main(String[] args) {
+                Scanner sc = new Scanner(System.in);
+
+                int[][] grid = new int[3][3];
+                int[] linearAnchor = new int[9];
+                int i, j, k;
+
+                for (i = 0; i < 3; i++) {
+                    for (j = 0; j < 3; j++) {
+                        grid[i][j] = sc.nextInt();
                     }
                 }
-                `,
-      },
-      {
-        questionId: q1.id,
-        language: "Python",
-        code: `
-              grid = [[0 for _ in range(10)] for _ in range(10)]
-              linear_anchor = [0 for _ in range(100)]
 
-              for i in range(10):
-                  for j in range(10):
-                      grid[i][j] = int(input())
+                for (i = 0; i < 3; i++) {
+                    k = 0;                    
+                    for (j = 0; j < 2; j++) { // still buggy
+                        linearAnchor[k] = grid[i][j];
+                        k++;
+                    }
+                }
 
-              for i in range(10):
-                  k = 0                 # LOGICAL ERROR #1
-                  for j in range(9):    # LOGICAL ERROR #2
-                      linear_anchor[k] = grid[i][j]
-                      k += 1
+                for (i = 0; i < 9; i++) {
+                    System.out.print(linearAnchor[i] + " ");
+                }
 
-              for x in linear_anchor:
-                  print(x, end=" ")
-              `,
-      },
-    ],
-  });
+                sc.close();
+            }
+        }
+      `),
+    },
+    {
+      questionId: q1.id,
+      language: "Python",
+      code: sanitizeCode(`
+        grid = [[0 for _ in range(3)] for _ in range(3)]
+        linear_anchor = [0 for _ in range(9)]
+
+        for i in range(3):
+            for j in range(3):
+                grid[i][j] = int(input())
+
+        for i in range(3):
+            k = 0                 # LOGICAL ERROR #1
+            for j in range(2):    # LOGICAL ERROR #2
+                linear_anchor[k] = grid[i][j]
+                k += 1
+
+        for x in linear_anchor:
+            print(x, end=" ")
+      `),
+    },
+  ],
+});
+
 
   await prisma.buggyCode.createMany({
     data: [
       {
         questionId: q2.id,
         language: "C",
-        code: `
+        code: sanitizeCode(`
                 #include <stdio.h>
-
                 int main() {
                     int n, i;
                     int arr[100];
                     int max1, max2;
                     int min1, min2;
-
                     scanf("%d", &n);
-
                     for (i = 0; i < n; i++) {
                         scanf("%d", &arr[i]);
                     }
-
                     max1 = max2 = arr[0];   
                     min1 = min2 = arr[0];   
 
@@ -309,12 +379,12 @@ async function main() {
                     return 0;
                 }
 
-                `,
+                `),
       },
       {
         questionId: q2.id,
         language: "Cpp",
-        code: `
+        code: sanitizeCode(`
                 #include <iostream>
                 using namespace std;
 
@@ -358,12 +428,12 @@ async function main() {
                     return 0;
                 }
 
-                `,
+                `),
       },
       {
         questionId: q2.id,
         language: "Java",
-        code: `
+        code: sanitizeCode(`
                 import java.util.Scanner;
                 public class BuggyFlatten {
                     public static void main(String[] args) {
@@ -394,12 +464,12 @@ async function main() {
                         sc.close();
                     }
                 }
-                `,
+                `),
       },
       {
         questionId: q2.id,
         language: "Python",
-        code: `
+        code: sanitizeCode(`
                 # Buggy Energy Signature Analysis
 
                 n = int(input())
@@ -425,7 +495,7 @@ async function main() {
                 print("2nd Max:", max2)
                 print("2nd Min:", min2)
 
-              `,
+              `),
       },
     ],
   });
@@ -434,9 +504,8 @@ async function main() {
       {
         questionId: q3.id,
         language: "C",
-        code: `
+        code: sanitizeCode(`
                 #include <stdio.h>
-
                 int main() {
                     int energy;
                     int sync;
@@ -459,12 +528,12 @@ async function main() {
 
                     return 0;
                 }
-                `,
+                `),
       },
       {
         questionId: q3.id,
         language: "Cpp",
-        code: `
+        code: sanitizeCode(`
                 #include <iostream>
                 using namespace std;
 
@@ -492,12 +561,12 @@ async function main() {
                     }
                     return "Done";
                 }
-                `,
+                `),
       },
       {
         questionId: q3.id,
         language: "Java",
-        code: `
+        code: sanitizeCode(`
               import java.util.Scanner;
 
               public class Buggy {
@@ -522,12 +591,12 @@ async function main() {
                       sc.close();
                   }
               }
-                `,
+                `),
       },
       {
         questionId: q3.id,
         language: "Python",
-        code: ` 
+        code: sanitizeCode(`
                 energyy = int(input())
                 sync = int(input())
                 state = input()
@@ -541,7 +610,7 @@ async function main() {
                 else:
                     print("WARNING: System instability detected!")
                     print("Stabilization Failed — Universe Unstable")
-              `,
+              `),
       },
     ],
   });
@@ -559,3 +628,4 @@ main().catch((e) => {
   console.error('Seed failed:', e);
   process.exit(1);
 });
+

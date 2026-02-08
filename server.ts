@@ -27,10 +27,10 @@ app.use((req, res, next) => {
 
 
 // app.use('/problems', problemRoutes);
-app.use('/submit', submissionRoutes);
 app.use('/run' , runRoutes);
 app.use('/' ,AuthRoutes );
 app.use('/admin' , AdminRoutes );
+
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
 
 // Create HTTP server and init Socket.IO

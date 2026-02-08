@@ -19,15 +19,25 @@ export const runCode = async (req: Request, res: Response) => {
       return null;
     });
 
-    if (!result || !result.run) return res.status(400).json({ message: 'Execution failed' });
+    if (!result || !result.run) {
+      return res.status(400).json({
+        output: '⚠️ Execution failed.',
+      });
+    }
 
-    let output = '';
-    if (result.compile?.stderr) output += `[COMPILE ERROR]\n${result.compile.stderr}\n\n`;
-    if (result.run.stderr) output += `[STDERR]\n${result.run.stderr}\n\n`;
-    output += `[STDOUT]\n${result.run.stdout || '(no output)'}\n`;
-    if (result.run.code !== 0) output += `\n[Exit Code] ${result.run.code}`;
+    const hasError =
+      result.compile?.stderr ||
+      result.run?.stderr ||
+      result.run?.code !== 0;
 
-    return res.status(200).json({ output, exitCode: result.run.code, success: result.run.code === 0 });
+    const output = hasError
+      ? '⚠️ Execution failed. Please review your code and try again.'
+      : (result.run.stdout || '(no output)');
+
+    return res.status(200).json({
+      output,
+    });
+
   } catch (error: any) {
     console.error('Run code error:', error);
     return res.status(500).json({ message: 'Network or runtime error', output: `Network or runtime error: ${error?.message || String(error)}` });

@@ -3,10 +3,10 @@ import cors from "cors";
 import dotenv from 'dotenv'
 import http from 'http';
 import { initSocket } from './src/socket';
-import submissionRoutes from './src/routes/submissionRoutes.js'
-import runRoutes from './src/routes/runRoutes.js'
-import AuthRoutes from './src/routes/AuthRoutes.js'
-import AdminRoutes from './src/routes/AdminRoutes.js'
+// import submissionRoutes from './src/routes/submissionRoutes.js'
+import runRoutes from './src/routes/runRoutes'
+import AuthRoutes from './src/routes/AuthRoutes'
+import AdminRoutes from './src/routes/AdminRoutes'
 dotenv.config();
 const app = express();
 app.use(cors({

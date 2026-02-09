@@ -15,7 +15,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "@prisma/adapter-libsql": "^7.0.0",

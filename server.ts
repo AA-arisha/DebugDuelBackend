@@ -7,6 +7,7 @@ import { initSocket } from './src/socket';
 import runRoutes from './src/routes/runRoutes'
 import AuthRoutes from './src/routes/AuthRoutes'
 import AdminRoutes from './src/routes/AdminRoutes'
+import userProgressRoutes from './src/routes/userProgressRoutes'
 dotenv.config();
 const app = express();
 app.use(cors({
@@ -30,6 +31,7 @@ app.use((req, res, next) => {
 app.use('/run' , runRoutes);
 app.use('/' ,AuthRoutes );
 app.use('/admin' , AdminRoutes );
+app.use('/user-progress', userProgressRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
 

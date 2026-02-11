@@ -1,5 +1,5 @@
-// Default to the public Piston API (emkc). Override with PISTON_BASE_URL if you host your own.
-const PISTON_BASE_URL = (process.env.PISTON_BASE_URL || 'https://emkc.org/api/v2/piston').replace(/\/$/, '');
+// Default to the public Piston API (emkc) at /api/v2. Override with PISTON_BASE_URL if you host your own.
+const PISTON_BASE_URL = (process.env.PISTON_BASE_URL || 'https://emkc.org/api/v2').replace(/\/$/, '');
 export const PISTON_EXECUTE_URL = `${PISTON_BASE_URL}/execute`;
 export const PISTON_RUNTIMES_URL = `${PISTON_BASE_URL}/runtimes`;
 

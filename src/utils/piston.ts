@@ -1,5 +1,5 @@
 // Default to the public Piston API (emkc) at /api/v2. Override with PISTON_BASE_URL if you host your own.
-const PISTON_BASE_URL = (process.env.PISTON_BASE_URL || 'https://emkc.org/api/v2').replace(/\/$/, '');
+const PISTON_BASE_URL = (process.env.PISTON_BASE_URL || 'https://emkc.org/api/v2/piston').replace(/\/$/, '');
 export const PISTON_EXECUTE_URL = `${PISTON_BASE_URL}/execute`;
 export const PISTON_RUNTIMES_URL = `${PISTON_BASE_URL}/runtimes`;
 
@@ -65,14 +65,28 @@ export const  executeCode = async (
 
 export const fetchRuntimeVersion = async (language: string) => {
   try {
+    console.log("Fetching runtimes for language:", language);
+
     const rtRes = await fetch(PISTON_RUNTIMES_URL);
-    if (rtRes.ok) {
-      const runtimes = await rtRes.json() as { language: string; version: string }[];
-      const match = runtimes.find((r) => r.language === languageMap[language.toLowerCase()]);
-      if (match) return match.version;
-    }
+    console.log("Runtime fetch response ok:", rtRes.ok);
+
+    if (!rtRes.ok) throw new Error(`Failed to fetch runtimes: ${rtRes.status}`);
+
+    const runtimes = await rtRes.json() as { language: string; version: string }[];
+    console.log("Runtimes returned:", runtimes.map(r => r.language));
+
+    const runtimeLanguage = languageMap[language.toLowerCase()];
+    console.log("Mapped language:", runtimeLanguage);
+
+    const match = runtimes.find((r) => r.language === runtimeLanguage);
+    console.log("Matched runtime:", match);
+
+    if (match) return match.version;
+
   } catch (err) {
     console.error('Error fetching runtimes:', err);
   }
+
   return undefined;
 };
+

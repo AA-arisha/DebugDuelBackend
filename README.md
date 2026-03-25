@@ -31,7 +31,7 @@ live updates for rounds and leaderboards.
 | Server          | Express                     |
 | Real‑time comm. | Socket.IO                   |
 | ORM             | Prisma                      |
-| Database        | SQLite / LibSQL             |
+| Database        | Postgres           |
 | Auth            | bcrypt + JWT                |
 | File parsing    | csv‑parser, xlsx            |
 | Environment     | dotenv                      |

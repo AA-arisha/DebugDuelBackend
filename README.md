@@ -4,7 +4,7 @@
 > Participants submit code, solve questions, and compete on leaderboards in real time.
 
 This service is written in **TypeScript** with **Express**, uses **Prisma** as the ORM,
-and persists to a **SQLite/LibSQL** database.  Socket.IO provides
+and persists to a **Postgres** database.  Socket.IO provides
 live updates for rounds and leaderboards.
 
 ---
